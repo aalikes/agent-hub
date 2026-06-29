@@ -29,8 +29,8 @@ const config = JSON.parse(readFileSync(configPath, "utf-8"));
 const C = config.company;
 const INF = config.infrastructure || {};
 
-if (!C?.name || !INF?.deepseek_api_key) {
-  console.error("Config must include company.name and infrastructure.deepseek_api_key");
+if (!C?.name || !(INF?.deepseek_api_key || process.env.DEEPSEEK_API_KEY)) {
+  console.error("Config must include company.name and infrastructure.deepseek_api_key (or set DEEPSEEK_API_KEY env var)");
   process.exit(1);
 }
 
