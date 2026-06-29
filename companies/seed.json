@@ -1,0 +1,25 @@
+{
+  "_comment": "Minimal seed config for a new company. Run research.mjs with this file to begin.",
+  "company": {
+    "name": "Your Company, LLC",
+    "slug": "your-company",
+    "description": "What does your company do? One paragraph describing your business, industry, and customers. Be specific — the more detail, the better the research.",
+    "website": "https://your-company.com"
+  },
+  "slack": {
+    "workspace_id": "T...",
+    "config_token": "xoxe.xoxp-..."
+  },
+  "infrastructure": {
+    "deepseek_api_key": "sk-...",
+    "obsidian_vault": "/Users/you/Library/Mobile Documents/iCloud~md~obsidian/Documents/Skills",
+    "notion_api_key": "ntn_...",
+    "notion_tracker_db_id": "NOTION_DATABASE_ID"
+  },
+  "channels": {
+    "critical": "critical",
+    "alerts": "alerts",
+    "general": "general"
+  },
+  "agentCount": 3
+}
