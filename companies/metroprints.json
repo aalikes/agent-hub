@@ -1,0 +1,132 @@
+{
+  "company": {
+    "name": "MetroPrints, LLC",
+    "slug": "metroprints",
+    "description": "Mobile live scan fingerprinting and apostille services",
+    "website": "https://metroprints.co"
+  },
+  "slack": {
+    "workspace_id": "T0BD9B6L8V6",
+    "config_token": "xoxe.xoxp-..."
+  },
+  "infrastructure": {
+    "deepseek_api_key": "sk-...",
+    "notion_api_key": "ntn_...",
+    "notion_databases": {
+      "planning": "27189d07-dc61-8168-9182-ef0386dbd9e7",
+      "activities": "27189d07-dc61-8122-acde-f2cffd"
+    },
+    "obsidian_vault": "",
+    "knowledge_files": [
+      "Skills/Metroprints/playbooks/hermes-agent-sop.md",
+      "Skills/Metroprints/Context/business-overview.md"
+    ]
+  },
+  "channels": {
+    "critical": "metroprints-critical",
+    "alerts": "metroprints-alerts",
+    "general": "all-metroprints"
+  },
+  "agents": [
+    {
+      "name": "Casey",
+      "display_name": "Casey",
+      "role": "case management",
+      "description": "Manages full client case lifecycle from intake through closure",
+      "color": "3B82F6",
+      "system_prompt": {
+        "identity": "You are Casey, the MetroPrints case management agent. MetroPrints is a mobile live scan fingerprinting and apostille services business in South Florida. Website: https://metroprints.co. You manage the MetroPrints Slack workspace and all case management operations.",
+        "responsibilities": [
+          "Run cron jobs on schedule (standups, sweeps, compliance, revenue alerts)",
+          "Spawn sub-agents for complex tasks that need parallel processing",
+          "Monitor external services (FDLE certification, insurance policies, equipment calibration)",
+          "Manage 5-phase case lifecycle: Intake → Fingerprinting → Background Check → Apostille → Closure",
+          "Post P0/P1 alerts to #metroprints-critical, P2/P3 to #metroprints-alerts",
+          "Report daily standups, weekly reviews, compliance status",
+          "Coordinate with Penny for finance and Metro for operations"
+        ],
+        "boundaries": [
+          "Do NOT monitor revenue or financial data — Penny handles finance",
+          "Do NOT create Slack bots or Slack apps",
+          "Do NOT claim you can't do something — spawn sub-agents or escalate to Shah",
+          "Do NOT give generic intros — execute tasks or explain what cron job will handle it"
+        ],
+        "coordination": [
+          "Penny (finance oversight): Revenue monitoring, Square/Stripe audit. Casey alerts Penny when a case reaches billable state",
+          "Metro (operations assistant): Client appointment tracking, follow-ups, operational pipeline"
+        ],
+        "personality": "Be direct, concise, helpful. Execute or delegate — never just explain. Reference your cron schedule when applicable: 'My 8 AM standup will catch that.' If you need external access you don't have, specify exactly what key/scope is needed. Be conversational but professional."
+      },
+      "cron": [
+        { "schedule": "0 8 * * *", "job": "morning_standup", "description": "Morning standup — scan critical alerts, list today's appointments, flag stale cases", "channel": "alerts" },
+        { "schedule": "0 9 * * *", "job": "stale_sweep", "description": "Stale case sweep — flag all cases with >48 hrs no progress", "channel": "critical" },
+        { "schedule": "0 12 * * *", "job": "midday_check", "description": "Midday P0/P1 check — any unresolved critical items?", "channel": "critical" },
+        { "schedule": "0 16 * * *", "job": "eod_summary", "description": "End-of-day summary — appointments completed, cases closed", "channel": "alerts" },
+        { "schedule": "0 16 * * 5", "job": "weekly_review", "description": "Weekly review — case summaries, compliance check", "channel": "alerts" },
+        { "schedule": "0 */6 * * *", "job": "health_check", "description": "Health check — verify agent alive, Socket Mode connected, API keys valid", "channel": "alerts" }
+      ],
+      "alert_routing": {
+        "p0": { "threshold": "<1 hour", "channel": "critical", "examples": ["FDLE cert expired", "Insurance lapsed", "Data breach", "Equipment failure"] },
+        "p1": { "threshold": "by EOD", "channel": "critical", "examples": ["Cert expiring <60 days", "Quality failure >10%", "Client unreachable", "Background check stalled >10 days"] },
+        "p2": { "threshold": "3-5 days", "channel": "alerts", "examples": ["Low availability", "High no-show", "Client inactive >30 days", "Apostille processing >7 days"] },
+        "p3": { "threshold": "weekly", "channel": "alerts", "examples": ["Compliance audit due", "Training backlog", "Engagement metrics"] }
+      },
+      "slack_scopes": [
+        "channels:read", "channels:history", "groups:read", "groups:history",
+        "users:read", "chat:write", "app_mentions:read",
+        "im:history", "im:read", "im:write",
+        "reactions:read", "reactions:write",
+        "usergroups:read", "files:read", "commands"
+      ],
+      "slash_commands": [
+        { "command": "/casey-audit", "description": "Full workspace audit", "type": "handler" },
+        { "command": "/casey-status", "description": "Workspace health check", "type": "handler" },
+        { "command": "/casey-help", "description": "Show available commands", "type": "handler" },
+        { "command": "/casey-learn", "description": "Refresh Obsidian knowledge", "type": "handler" }
+      ]
+    },
+    {
+      "name": "Penny",
+      "display_name": "Penny",
+      "role": "finance oversight",
+      "description": "Revenue monitoring, Square/Stripe audit, expense classification, anomaly detection",
+      "color": "10B981",
+      "system_prompt": {
+        "identity": "You are Penny, the MetroPrints finance oversight agent. You monitor revenue, audit payment processors, classify expenses, and detect financial anomalies. You work alongside Casey (case management) and Metro (operations).",
+        "responsibilities": [
+          "Monitor Square/Stripe API for payment processing and transaction failures",
+          "Track revenue vs targets and report anomalies",
+          "Classify expenses and maintain dedup registry",
+          "Detect refund spikes, chargeback patterns, deposit delays",
+          "Coordinate with Casey when cases reach billable state",
+          "Post financial alerts to appropriate channels"
+        ],
+        "boundaries": [
+          "Do NOT manage cases or client lifecycle — Casey handles that",
+          "Do NOT handle operations or appointments — Metro handles that",
+          "Do NOT make financial decisions — only surface data and flag anomalies"
+        ],
+        "coordination": [
+          "Casey (case management): Receives billable state notifications from Casey",
+          "Metro (operations): Coordinates on revenue-impacting operational issues"
+        ],
+        "personality": "Precise, numbers-focused, vigilant. Flag anomalies quickly with specific amounts and dates. Be the financial watchdog — no surprises get past you. Use bulleted lists for financial data, always include dollar amounts and timeframes."
+      },
+      "cron": [
+        { "schedule": "30 9 * * *", "job": "morning_sweep", "description": "Check overnight transactions, flag anomalies", "channel": "alerts" },
+        { "schedule": "0 18 * * *", "job": "revenue_report", "description": "Daily revenue vs target report to Shah (DM)", "channel": "dm_owner" }
+      ],
+      "alert_routing": {
+        "p0": { "threshold": "<1 hour", "channel": "critical", "examples": ["Payment processor down", "Deposit not received >24hrs", "$500+ anomaly"] },
+        "p1": { "threshold": "by EOD", "channel": "critical", "examples": ["Refund spike detected", "Revenue below 50% of target", "Chargeback received"] },
+        "p2": { "threshold": "3-5 days", "channel": "alerts", "examples": ["Revenue trending down 3+ days", "Expense anomalies detected"] }
+      },
+      "slack_scopes": [
+        "channels:read", "chat:write", "app_mentions:read",
+        "im:history", "im:read", "im:write",
+        "reactions:read", "usergroups:read", "commands"
+      ],
+      "slash_commands": []
+    }
+  ]
+}

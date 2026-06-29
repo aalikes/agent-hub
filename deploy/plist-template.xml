@@ -26,11 +26,21 @@
 		<key>DEEPSEEK_API_KEY</key>
 		<string>{{DEEPSEEK_API_KEY}}</string>
 		<key>AGENT_NAME</key>
+		<string>{{AGENT_NAME}}</string>
+		<key>AGENT_SLUG</key>
 		<string>{{AGENT_SLUG}}</string>
 		<key>AGENT_DISPLAY_NAME</key>
 		<string>{{AGENT_DISPLAY_NAME}}</string>
+		<key>AGENT_ROLE</key>
+		<string>{{AGENT_ROLE}}</string>
 		<key>COMPANY_NAME</key>
 		<string>{{COMPANY_NAME}}</string>
+		<key>COMPANY_SLUG</key>
+		<string>{{COMPANY_SLUG}}</string>
+		<key>COMPANY_DESCRIPTION</key>
+		<string>{{COMPANY_DESCRIPTION}}</string>
+		<key>COMPANY_WEBSITE</key>
+		<string>{{COMPANY_WEBSITE}}</string>
 		<key>OBSIDIAN_VAULT</key>
 		<string>{{OBSIDIAN_VAULT_PATH}}</string>
 		<key>KNOWLEDGE_FILES</key>
