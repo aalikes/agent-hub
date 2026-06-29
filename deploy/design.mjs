@@ -120,7 +120,13 @@ Design ${C.agentCount || 3} AI agents for ${C.name}. Every business needs at min
 Additional agents may be needed based on industry complexity (e.g. compliance agent for regulated industries, content agent for media, support agent for SaaS).
 
 For each agent, provide:
-- **name**: Short lowercase identifier (e.g. "casey", "penny", "metro")
+- **name**: Short lowercase identifier. Pick a NAMING THEME first (all agents must share one theme):
+  * First names: casey, penny, metro — human "coworker" feel
+  * Mythological: hermes, athena, apollo — authoritative
+  * Nature: river, sage, flint — organic/sustainable
+  * Tech: byte, echo, nova — SaaS/digital
+  * Gemstone: opal, onyx, jasper — luxury
+  * The name should hint at the role (e.g. "penny" for finance, "atlas" for operations)
 - **display_name**: Capitalized display name (e.g. "Casey", "Penny", "Metro")
 - **role**: 2-3 word description (e.g. "case management", "finance oversight")
 - **description**: One-line summary
