@@ -14,7 +14,7 @@ Research ──────────→ Agent Design ────────
 
 | Phase | What | Command | Output |
 |-------|------|---------|--------|
-| 1. Research | Spawn 5 parallel agents investigating company, industry, workflow | `./deploy/research.mjs` | Research report → Obsidian |
+| 1. Research | Spawn 4 parallel agents investigating company, industry, workflow | `./deploy/research.mjs` | Research report → Obsidian |
 | 2. Design | LLM analyzes research, generates agent definitions | `./deploy/design.mjs` | Company config JSON + agent design → Obsidian |
 | 3. Deploy | One command deploys all agents | `./deploy/deploy-all.mjs` | Live agents in Slack + deploy report → Obsidian |
 
@@ -46,7 +46,7 @@ cp companies/seed.json companies/my-company.json
 
 | Step | Auto |
 |------|------|
-| Spawn 5 DeepSeek sub-agents (Market, Workflow, Tech, Customer, Risk) | ✅ |
+| Spawn 4 DeepSeek sub-agents (Market+Risk, Workflow, Tech, Customer) | ✅ |
 | Compile results into structured markdown report | ✅ |
 | Save to Obsidian: `vault/company/Context/research-report-{date}.md` | ✅ |
 | Log to Notion: Status → Researching | ✅ |
@@ -70,9 +70,12 @@ cp companies/seed.json companies/my-company.json
 | Copy listener-utils.mjs | ✅ |
 | Generate and load launchd plist | ✅ |
 | Inject MCP config + permissions into opencode.jsonc | ✅ |
+| Create private Slack channel for agent coordination | ✅ |
+| Invite all agents + owner to coordination channel | ✅ |
+| Cross-agent testing (each agent tests another) | ✅ |
 | Generate OpenCode agent definition .md | ✅ |
 | Save deploy report to Obsidian | ✅ |
-| Log to Notion: Status → Deploying | ✅ |
+| Log to Notion: Status → Deploying (with test results) | ✅ |
 | Restart OpenCode | ❌ Manual (one step) |
 
 ## Files

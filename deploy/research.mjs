@@ -3,8 +3,8 @@
 // ── Agent Hub Research ────────────────────────────────
 // Usage: ./research.mjs companies/new-company.json [--dry-run]
 //
-// Reads a minimal company config and spawns 5 parallel research
-// sub-agents (Market, Workflow, Tech, Customer, Risk) via DeepSeek.
+// Reads a minimal company config and spawns 4 parallel research
+// sub-agents (Market+Risk, Workflow, Tech, Customer) via DeepSeek.
 // Compiles results into a research report, saves to Obsidian vault,
 // and logs to Notion tracker.
 
@@ -34,7 +34,7 @@ if (!C?.name || !INF?.deepseek_api_key) {
   process.exit(1);
 }
 
-// ── Research Prompts ─────────────────────────────────
+// ── Research Prompts (4 agents) ──────────────────────
 
 function buildPrompts() {
   const desc = C.description || C.name;
@@ -42,7 +42,7 @@ function buildPrompts() {
 
   return [
     {
-      role: "Market & Industry Researcher",
+      role: "Market, Industry & Risk Researcher",
       prompt: `Research "${C.name}" and its industry thoroughly. The company is described as: "${desc}".${web}
 
 Deliver a structured report covering:
@@ -51,11 +51,11 @@ Deliver a structured report covering:
 
 2. COMPETITIVE LANDSCAPE: Top 5 direct competitors. For each: what they do, pricing model, strengths, weaknesses, and how ${C.name} differs.
 
-3. COMMUNITY SENTIMENT: Search Reddit, Quora, Twitter/X, Hacker News, and industry forums for what people say about this industry. Common complaints about existing providers? What do customers want that they can't get? Recurring themes?
+3. COMMUNITY SENTIMENT: Search Reddit, Quora, Twitter/X, Hacker News, and industry forums for what people say about this industry. Common complaints about existing providers? What do customers want that they can't get?
 
-4. MACRO TRENDS: 3-5 trends affecting this industry (regulation, tech shifts, consumer behavior, economic). For each: likelihood of impact (high/medium/low) and timeframe.
+4. MACRO TRENDS & REGULATION: 3-5 trends affecting this industry (regulation, tech shifts, consumer behavior, economic). Include regulatory requirements: industry-specific licensure, certifications, inspections, data privacy (GDPR, CCPA), payment processing (PCI), insurance requirements.
 
-5. POSITIONING: Where does ${C.name} sit? Premium / budget / niche specialist / generalist?
+5. POSITIONING & RISK: Where does ${C.name} sit? Premium / budget / niche specialist / generalist? What are the top business risks (single points of failure, key-person dependency, supply chain, seasonal volatility, reputation risk)? Risk severity ratings (1-10).
 
 Return findings organized by numbered section with sources cited.`,
     },
@@ -73,7 +73,7 @@ Deliver a structured report covering:
 
 4. AUTOMATION TARGETS: Rank the top automation opportunities by time saved, error reduction, and implementation difficulty.
 
-5. IDEAL STATE: If you could redesign this workflow from scratch, what would it look like? What tools, integrations, and dashboard would you use?
+5. IDEAL STATE & RISK: If you could redesign this workflow from scratch, what would it look like? What tools, integrations, and dashboard? Also identify operational risks: key-person dependencies, single points of failure, what breaks if the owner is out for 2 weeks?
 
 Return findings with concrete examples and estimated time/cost savings.`,
     },
@@ -112,24 +112,6 @@ Deliver a structured report covering:
 5. GROWTH LEVERS: 3-5 ways businesses in this space increase revenue (upsells, retention, new channels, referrals, price optimization). For each: estimated revenue impact, implementation difficulty, timeline.
 
 Return findings with customer sentiment data and revenue impact estimates.`,
-    },
-    {
-      role: "Risk & Compliance Analyst",
-      prompt: `Assess the risk and compliance landscape for a business like "${C.name}". The company is described as: "${desc}".${web}
-
-Deliver a structured report covering:
-
-1. REGULATORY LANDSCAPE: What regulations apply to this industry? Industry-specific licensure, certifications, inspections. Data privacy (GDPR, CCPA, HIPAA if applicable). Payment processing (PCI). Employment/contractor law. Insurance requirements.
-
-2. BUSINESS RISKS: Top risks ranked by severity. Single points of failure (people, systems, suppliers). Key-person dependency (what if the owner is out for 2 weeks?). Supply chain/vendor risk. Seasonal/economic volatility. Reputation risk.
-
-3. COMMUNITY WARNINGS: Search Reddit, Quora, legal forums for common legal/compliance pitfalls in this industry. What do people get sued for? What fines or penalties are common? What insurance claims happen most?
-
-4. CONTRACT & LEGAL: What contracts, terms of service, waivers, or disclaimers are standard? What's typically missing that causes problems?
-
-5. MITIGATION PLAN: For each top risk — specific mitigation action, estimated cost, urgency (now / next quarter / this year).
-
-Return findings with risk severity ratings (1-10) and concrete mitigation steps.`,
     },
   ];
 }
@@ -182,7 +164,7 @@ tags:
 # ${C.name} — Deep-Dive Research Report
 
 > Compiled ${date} by Agent Hub Research Pipeline
-> 5 parallel agents: Market, Workflow, Tech, Customer, Risk
+> 4 parallel agents: Market+Risk, Workflow, Tech, Customer
 
 ---
 
@@ -192,7 +174,7 @@ tags:
 **Description:** ${C.description || "N/A"}
 ${C.website ? `**Website:** ${C.website}` : ""}
 
-This report was generated by spawning 5 parallel AI research agents, each investigating a different dimension of ${C.name} and its industry. Findings are compiled below.
+This report was generated by spawning 4 parallel AI research agents, each investigating a different dimension of ${C.name} and its industry. Findings are compiled below.
 
 ---
 
@@ -206,12 +188,11 @@ This report was generated by spawning 5 parallel AI research agents, each invest
 
   md += `## Research Methodology
 
-This report was compiled by 5 parallel AI sub-agents researching:
-- **Market & Industry** — market size, competitors, trends, positioning
-- **Workflow & Operations** — process map, bottlenecks, automation targets
+This report was compiled by 4 parallel AI sub-agents researching:
+- **Market, Industry & Risk** — market size, competitors, trends, positioning, regulatory landscape, business risks
+- **Workflow & Operations** — process map, bottlenecks, automation targets, operational risks
 - **Technology & Stack** — tool inventory, fitness, integration gaps, target stack
 - **Customer & Revenue** — customer journey, pain points, revenue analysis, growth levers
-- **Risk & Compliance** — regulatory landscape, business risks, mitigation plan
 
 Sources include Reddit, Quora, Hacker News, industry publications, community forums, and internal documents.
 
@@ -299,7 +280,7 @@ async function logToNotion(status, phase, event, notes = "") {
 // ── Main ─────────────────────────────────────────────
 
 console.log(`\n🔬 Agent Hub Research: ${C.name}\n`);
-console.log(`Spawning 5 research agents in parallel...`);
+console.log(`Spawning 4 research agents in parallel...`);
 
 const prompts = buildPrompts();
 
@@ -313,10 +294,10 @@ if (dryRun) {
 
 const startTime = Date.now();
 
-// Spawn all 5 in parallel
+// Spawn all 4 in parallel
 const results = await Promise.all(
   prompts.map(async (p, i) => {
-    console.log(`  [${i + 1}/5] Researching: ${p.role}...`);
+    console.log(`  [${i + 1}/4] Researching: ${p.role}...`);
     try {
       const text = await deepseek(p);
       console.log(`  ✅ ${p.role} — ${text.length} chars`);
@@ -329,7 +310,7 @@ const results = await Promise.all(
 );
 
 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-console.log(`\n✅ All 5 agents completed in ${elapsed}s`);
+console.log(`\n✅ All 4 agents completed in ${elapsed}s`);
 
 // Compile report
 const report = compileReport(prompts, results);
@@ -344,7 +325,7 @@ console.log(`\n── Logging to Notion ──`);
 await logToNotion(
   "Researching",
   "Research",
-  "5-agent research completed",
+  "4-agent research completed",
   `Report: ${savedPath || "not saved"}. ${elapsed}s elapsed.`
 );
 if (INF.notion_api_key && INF.notion_tracker_db_id) console.log(`  ✅ Notion tracker updated`);

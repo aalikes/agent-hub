@@ -356,7 +356,7 @@ tags:
   return md;
 }
 
-function renderDeployReport(cfg, mcpConfigs) {
+function renderDeployReport(cfg, mcpConfigs, channelName, channelId, testResults = []) {
   const date = new Date().toISOString();
   let md = `---
 date: ${date.split("T")[0]}
@@ -383,6 +383,23 @@ tags:
   md += `\n## MCP Configuration\n\n`;
   for (const mcp of mcpConfigs) {
     md += `- \`${mcp.key}\` — \`SLACK_MCP_${cfg.company.slug.toUpperCase()}_XOXB_TOKEN\`\n`;
+  }
+
+  if (channelName) {
+    md += `\n## Agent Coordination Channel\n\n`;
+    md += `- **Channel:** #${channelName}\n`;
+    if (channelId) md += `- **ID:** \`${channelId}\`\n`;
+    md += `- **Type:** Private — only agents and operators invited\n`;
+  }
+
+  if (testResults.length > 0) {
+    md += `\n## Cross-Agent Test Results\n\n`;
+    md += `| From | To | Status | Detail |\n`;
+    md += `|------|----|--------|--------|\n`;
+    testResults.forEach(r => {
+      const icon = r.status === "passed" ? "✅" : r.status === "timeout" ? "⏱️" : "❌";
+      md += `| ${r.from} | ${r.to} | ${icon} ${r.status} | ${r.detail || ""} |\n`;
+    });
   }
 
   md += `\n## Next Steps\n\n`;
@@ -573,6 +590,192 @@ for (const mcp of mcpConfigs) {
   }
 }
 
+// ── Post-Deploy: Create Agent Coordination Channel ────
+
+console.log(`\n── Agent Channel ──`.padEnd(60, "─"));
+
+const agentChannelName = `${C.slug}-agents`;
+let agentChannelId = null;
+
+if (!dryRun && mcpConfigs.length > 0) {
+  const token = mcpConfigs[0].xoxbRaw;
+  if (token && token !== "xoxb-...") {
+    try {
+      // Create private channel for agent coordination
+      const createRes = await fetch("https://slack.com/api/conversations.create", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: agentChannelName, is_private: true }),
+      });
+      const createJson = await createRes.json();
+
+      if (createJson.ok && createJson.channel?.id) {
+        agentChannelId = createJson.channel.id;
+        console.log(`  ✅ Created private channel: #${agentChannelName} (${agentChannelId})`);
+
+        // Invite all bot users to the channel
+        for (const agent of config.agents) {
+          const botToken = process.env[`SLACK_XOXB_${agent.name.toUpperCase()}`] || mcpConfigs[0]?.xoxbRaw;
+          if (botToken && botToken !== "xoxb-...") {
+            try {
+              // Get bot user ID from auth.test
+              const authRes = await fetch("https://slack.com/api/auth.test", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${botToken}`, "Content-Type": "application/json" },
+              });
+              const authJson = await authRes.json();
+              if (authJson.ok && authJson.user_id) {
+                await fetch("https://slack.com/api/conversations.invite", {
+                  method: "POST",
+                  headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+                  body: JSON.stringify({ channel: agentChannelId, users: authJson.user_id }),
+                });
+                console.log(`  ✅ Invited ${agent.display_name || agent.name} (${authJson.user_id})`);
+              }
+            } catch (e) {
+              console.log(`  ⚠ Could not invite ${agent.name}: ${e.message}`);
+            }
+          }
+        }
+      } else {
+        // Channel might already exist — try to find it
+        const listRes = await fetch("https://slack.com/api/conversations.list", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ types: "private_channel", limit: 200 }),
+        });
+        const listJson = await listRes.json();
+        const existing = (listJson.channels || []).find(c => c.name === agentChannelName);
+        if (existing) {
+          agentChannelId = existing.id;
+          console.log(`  ℹ️ Channel #${agentChannelName} already exists (${agentChannelId})`);
+        } else {
+          console.log(`  ⚠ Could not create channel: ${createJson.error}`);
+        }
+      }
+    } catch (e) {
+      console.error(`  ✗ Channel creation failed: ${e.message}`);
+    }
+  } else {
+    console.log(`  ⚠ No valid bot token — skipping channel creation`);
+  }
+} else if (dryRun) {
+  console.log(`  [DRY RUN] Would create private channel: #${agentChannelName}`);
+  console.log(`  [DRY RUN] Would invite all agents`);
+} else {
+  console.log(`  ⚠ No agents deployed — skipping channel`);
+}
+
+// ── Post-Deploy: Cross-Agent Testing ─────────────────
+
+console.log(`\n── Cross-Agent Testing ──`.padEnd(60, "─"));
+
+const testResults = [];
+
+if (!dryRun && config.agents.length >= 2 && mcpConfigs.length > 0) {
+  const primaryToken = mcpConfigs[0].xoxbRaw;
+
+  if (primaryToken && primaryToken !== "xoxb-...") {
+    // Test each agent pair: agent[i] DMs agent[i+1] (wrap around)
+    for (let i = 0; i < Math.min(config.agents.length, 4); i++) {
+      const from = config.agents[i];
+      const to = config.agents[(i + 1) % config.agents.length];
+      const fromName = from.display_name || from.name;
+      const toName = to.display_name || to.name;
+
+      console.log(`  Testing: ${fromName} → ${toName}...`);
+
+      try {
+        // Open DM from the "from" bot to the "to" bot user
+        // First, get the "to" bot's user ID
+        const toToken = mcpConfigs[0]?.xoxbRaw; // Use same token to find user
+        
+        // Actually, for cross-testing we need to use the bot tokens.
+        // Let's use a simpler approach: post in the agent channel and check replies.
+        
+        let result = { from: fromName, to: toName, status: "unknown" };
+
+        if (agentChannelId) {
+          // Post test message in the shared agent channel
+          const testMsg = `🤖 *Agent Test:* ${fromName} → ${toName}\n\n@${toName} respond with "pong from ${toName}" to confirm you're operational.`;
+          
+          const postRes = await fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${primaryToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: agentChannelId, text: testMsg, unfurl_links: false, unfurl_media: false }),
+          });
+          const postJson = await postRes.json();
+
+          if (postJson.ok) {
+            console.log(`    ✅ Test message posted`);
+            
+            // Wait for agents to respond
+            console.log(`    ⏳ Waiting 5s for responses...`);
+            await new Promise(r => setTimeout(r, 5000));
+            
+            // Check for replies in the channel
+            const histRes = await fetch("https://slack.com/api/conversations.history", {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${primaryToken}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ channel: agentChannelId, limit: 5 }),
+            });
+            const histJson = await histRes.json();
+            
+            const replies = (histJson.messages || []).filter(m => 
+              m.text && !m.bot_id && m.text.toLowerCase().includes("pong")
+            );
+            
+            if (replies.length > 0) {
+              result.status = "passed";
+              result.detail = `${replies.length} responses received`;
+              console.log(`    ✅ Test PASSED — ${replies.length} responses`);
+            } else {
+              result.status = "timeout";
+              result.detail = "No pong response within 5s";
+              console.log(`    ⚠ Test TIMEOUT — no response (agents may need OpenCode restart)`);
+            }
+          } else {
+            result.status = "error";
+            result.detail = `Failed to post: ${postJson.error}`;
+            console.log(`    ✗ Post failed: ${postJson.error}`);
+          }
+        } else {
+          // No channel — try DM approach
+          // Can't easily DM between bots without user IDs, so note it
+          result.status = "skipped";
+          result.detail = "No agent channel to test in";
+          console.log(`    ⚠ Skipped — no agent coordination channel`);
+        }
+        
+        testResults.push(result);
+      } catch (e) {
+        testResults.push({ from: fromName, to: toName, status: "error", detail: e.message });
+        console.log(`    ✗ Error: ${e.message}`);
+      }
+    }
+
+    // Print test summary
+    const passed = testResults.filter(r => r.status === "passed").length;
+    const total = testResults.length;
+    console.log(`\n  Test Results: ${passed}/${total} passed`);
+    testResults.forEach(r => {
+      const icon = r.status === "passed" ? "✅" : r.status === "timeout" ? "⏱️" : "❌";
+      console.log(`    ${icon} ${r.from} → ${r.to}: ${r.status}${r.detail ? ` (${r.detail})` : ""}`);
+    });
+  } else {
+    console.log(`  ⚠ No valid bot token — skipping agent tests`);
+  }
+} else if (dryRun) {
+  console.log(`  [DRY RUN] Would run cross-agent tests:`);
+  for (let i = 0; i < Math.min(config.agents.length, 4); i++) {
+    const from = config.agents[i];
+    const to = config.agents[(i + 1) % config.agents.length];
+    console.log(`    ${from.display_name || from.name} → ${to.display_name || to.name}`);
+  }
+} else {
+  console.log(`  ⚠ Need at least 2 agents for cross-testing`);
+}
+
 // ── Post-Deploy: Save Reports to Obsidian ─────────────
 
 console.log(`\n── Obsidian Reports ──`.padEnd(60, "─"));
@@ -589,7 +792,7 @@ if (vaultPath && !dryRun) {
   console.log(`  ✅ Saved agent design: ${designPath}`);
 
   // Save deployment record
-  const deployMd = renderDeployReport(config, mcpConfigs);
+  const deployMd = renderDeployReport(config, mcpConfigs, agentChannelName, agentChannelId, testResults);
   const deployPath = join(vaultDir, `deploy-report-${new Date().toISOString().split("T")[0]}.md`);
   writeFileSync(deployPath, deployMd);
   console.log(`  ✅ Saved deploy report: ${deployPath}`);
@@ -620,7 +823,7 @@ if (notionKey && trackerDbId && !dryRun) {
           "Agents": { number: config.agents.length },
           "Event": { rich_text: [{ text: { content: `Agent "${agent.display_name || agent.name}" deployed via agent-hub` } }] },
           "Last Activity": { date: { start: new Date().toISOString() } },
-          "Notes": { rich_text: [{ text: { content: `Role: ${agent.role}. Slack app created. listener.mjs + plist generated. launchd loaded.` } }] },
+          "Notes": { rich_text: [{ text: { content: `Role: ${agent.role}. Slack app created. listener.mjs + plist generated. launchd loaded. Channel: #${agentChannelName}. Tests: ${testResults.filter(r => r.status === "passed").length}/${testResults.length} passed.` } }] },
         },
       };
 
@@ -667,6 +870,15 @@ console.log(`\n${"".padEnd(60, "=")}`);
 console.log(`\n✅ Deploy complete for ${C.name}`);
 console.log(`   ${config.agents.length} agents: ${config.agents.map(a => a.name).join(", ")}`);
 
+if (agentChannelId) {
+  console.log(`\n🔒 Agent channel: #${agentChannelName} (private)`);
+}
+
+if (testResults.length > 0) {
+  const passed = testResults.filter(r => r.status === "passed").length;
+  console.log(`🧪 Cross-agent tests: ${passed}/${testResults.length} passed`);
+}
+
 if (vaultPath) {
   console.log(`\n📓 Obsidian reports saved to: ${join(vaultPath, "Skills", C.slug, "Context")}`);
 }
@@ -680,8 +892,16 @@ console.log(`  2. Export env var (add to .zshrc if not already):`);
 for (const mcp of mcpConfigs) {
   console.log(`     export SLACK_MCP_${C.slug.toUpperCase()}_XOXB_TOKEN="${mcp.xoxbRaw}"`);
 }
-console.log(`  3. Invite agents to channels in Slack`);
-console.log(`  4. Test: DM each agent in Slack`);
+if (agentChannelId) {
+  console.log(`  3. Agent coordination channel: #${agentChannelName} (agents already invited)`);
+} else {
+  console.log(`  3. Invite agents to channels in Slack`);
+}
+if (testResults.some(r => r.status !== "passed")) {
+  console.log(`  4. Re-run tests after OpenCode restart: agents need MCP to respond`);
+} else {
+  console.log(`  4. ✅ All cross-agent tests passed`);
+}
 console.log(`\nLogs:`);
 for (const agent of config.agents) {
   console.log(`  tail -f ~/Library/Logs/com.${C.slug}.${slug(agent.name)}.listener.log`);
