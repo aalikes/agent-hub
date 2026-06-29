@@ -1,0 +1,24 @@
+// Add to ~/.config/opencode/opencode.jsonc → "mcp" section
+//
+// Replace {{PROJECT_SLUG}} with your project identifier (e.g., "metroprints", "provn")
+// Set SLACK_MCP_XOXB_TOKEN in environment or .zshrc
+
+"slack-{{PROJECT_SLUG}}": {
+  "type": "local",
+  "command": [
+    "slack-mcp-server",
+    "-t", "stdio",
+    "-enabled-tools",
+    "channels_list,conversations_history,conversations_search_messages,conversations_replies,conversations_unreads,conversations_mark,users_search,usergroups_list,usergroups_me,usergroups_create,usergroups_update,usergroups_users_update,reactions_add,reactions_remove,conversations_add_message"
+  ],
+  "enabled": true,
+  "environment": {
+    "SLACK_MCP_XOXB_TOKEN": "{{SLACK_MCP_XOXB_TOKEN}}",
+    "SLACK_MCP_ADD_MESSAGE_TOOL": "true",
+    "SLACK_MCP_MARK_TOOL": "true",
+    "SLACK_MCP_LOG_LEVEL": "info"
+  }
+}
+
+// Also add to ~/.config/opencode/opencode.jsonc → "permissions" section:
+// "slack-{{PROJECT_SLUG}}_*": "allow"

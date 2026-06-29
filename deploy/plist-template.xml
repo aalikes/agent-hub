@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.{{COMPANY_SLUG}}.{{AGENT_SLUG}}.listener</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/node</string>
+		<string>/Users/{{USER}}/Projects/{{COMPANY_SLUG}}/agents/{{AGENT_SLUG}}/listener.mjs</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>WorkingDirectory</key>
+	<string>/Users/{{USER}}/Projects/{{COMPANY_SLUG}}/agents/{{AGENT_SLUG}}</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>SLACK_XAPP_TOKEN</key>
+		<string>{{SLACK_XAPP_TOKEN}}</string>
+		<key>SLACK_XOXB_TOKEN</key>
+		<string>{{SLACK_XOXB_TOKEN}}</string>
+		<key>SLACK_BOT_USER_ID</key>
+		<string>{{SLACK_BOT_USER_ID}}</string>
+		<key>DEEPSEEK_API_KEY</key>
+		<string>{{DEEPSEEK_API_KEY}}</string>
+		<key>AGENT_NAME</key>
+		<string>{{AGENT_SLUG}}</string>
+		<key>AGENT_DISPLAY_NAME</key>
+		<string>{{AGENT_DISPLAY_NAME}}</string>
+		<key>COMPANY_NAME</key>
+		<string>{{COMPANY_NAME}}</string>
+		<key>OBSIDIAN_VAULT</key>
+		<string>{{OBSIDIAN_VAULT_PATH}}</string>
+		<key>KNOWLEDGE_FILES</key>
+		<string>{{KNOWLEDGE_FILES}}</string>
+		<key>NOTION_API_KEY</key>
+		<string>{{NOTION_API_KEY}}</string>
+		<key>NOTION_DATABASES</key>
+		<string>{{NOTION_DATABASES}}</string>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/{{USER}}/Library/Logs/com.{{COMPANY_SLUG}}.{{AGENT_SLUG}}.listener.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/{{USER}}/Library/Logs/com.{{COMPANY_SLUG}}.{{AGENT_SLUG}}.listener.error.log</string>
+</dict>
+</plist>
