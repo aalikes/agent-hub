@@ -10,11 +10,11 @@ Research ──────────→ Agent Design ────────
 (5 parallel agents)   (per-company plan)      (automated)
 ```
 
-| Phase | What | Template | Output |
-|-------|------|----------|--------|
-| 1. Research | Spawn 5 agents to investigate company, industry, workflow | `onboarding/research-agent-spawn-template.md` | Research report |
-| 2. Design | Define what agents the company needs, their roles, tools, cron | `onboarding/agent-design-template.md` | Company config JSON |
-| 3. Deploy | One command deploys all agents | `./deploy/deploy-all.mjs` | Live agents in Slack |
+| Phase | What | Template | Output | Tracked In |
+|-------|------|----------|--------|------------|
+| 1. Research | Spawn 5 agents to investigate company, industry, workflow | `onboarding/research-agent-spawn-template.md` | Research report → Obsidian vault | Notion: Researching |
+| 2. Design | Define what agents the company needs, their roles, tools, cron | `onboarding/agent-design-template.md` | Company config JSON + agent-design.md → Obsidian | Notion: Designing |
+| 3. Deploy | One command deploys all agents | `./deploy/deploy-all.mjs` | Live agents in Slack + deploy-report.md → Obsidian | Notion: Deploying → Live |
 
 ## Quick Start
 
@@ -48,6 +48,9 @@ cp companies/example.json companies/my-company.json
 | Append MCP config to `opencode.jsonc` | ✅ |
 | Add MCP permissions | ✅ |
 | Generate OpenCode agent definition `.md` | ✅ |
+| Save agent-design.md to Obsidian vault | ✅ (if `obsidian_vault` configured) |
+| Save deploy-report.md to Obsidian vault | ✅ (if `obsidian_vault` configured) |
+| Log deployment to Notion Agent Hub Tracker | ✅ (if `notion_tracker_db_id` configured) |
 | Restart OpenCode | ❌ Manual (one step) |
 
 ## Files
@@ -74,6 +77,50 @@ agent-hub/
 ├── skills/                            # Obsidian vault skill structure
 └── docs/
     └── agent-infrastructure.md        # Full infrastructure reference
+```
+
+## Obsidian Integration
+
+Agents read knowledge FROM Obsidian and reports are saved TO Obsidian automatically.
+
+### What Gets Saved
+
+| Report | Path | When |
+|--------|------|------|
+| Research report | `Skills/{company}/Context/research-report-{date}.md` | After Phase 1 research completes |
+| Agent design | `Skills/{company}/Context/agent-design-{date}.md` | During Phase 3 deploy |
+| Deployment record | `Skills/{company}/Context/deploy-report-{date}.md` | After Phase 3 deploy |
+
+### Configuration
+
+```json
+{
+  "infrastructure": {
+    "obsidian_vault": "/Users/you/Library/Mobile Documents/iCloud~md~obsidian/Documents/Skills",
+    "knowledge_files": ["Skills/Metroprints/Context/business-overview.md"]
+  }
+}
+```
+
+## Notion Tracking
+
+Every phase is tracked in a Notion database. See `docs/notion-tracker-schema.md` for setup.
+
+### What Gets Logged
+
+- Company onboarding status (Researching → Designing → Deploying → Live)
+- Agent count and deployment events
+- Links to Obsidian reports
+
+### Configuration
+
+```json
+{
+  "infrastructure": {
+    "notion_api_key": "ntn_...",
+    "notion_tracker_db_id": "DATABASE_ID"
+  }
+}
 ```
 
 ## Company Config Schema

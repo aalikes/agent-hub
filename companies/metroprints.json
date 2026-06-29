@@ -12,11 +12,12 @@
   "infrastructure": {
     "deepseek_api_key": "sk-...",
     "notion_api_key": "ntn_...",
+    "notion_tracker_db_id": "NOTION_DATABASE_ID_HERE",
     "notion_databases": {
       "planning": "27189d07-dc61-8168-9182-ef0386dbd9e7",
       "activities": "27189d07-dc61-8122-acde-f2cffd"
     },
-    "obsidian_vault": "",
+    "obsidian_vault": "/Users/shahsaint-cyr/Library/Mobile Documents/iCloud~md~obsidian/Documents/Skills",
     "knowledge_files": [
       "Skills/Metroprints/playbooks/hermes-agent-sop.md",
       "Skills/Metroprints/Context/business-overview.md"

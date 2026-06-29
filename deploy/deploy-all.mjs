@@ -311,6 +311,89 @@ Always provide clear, actionable summaries. When settings are missing, provide t
 `;
 }
 
+// ── Report Renderers ─────────────────────────────────
+
+function renderAgentDesignReport(cfg) {
+  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  let md = `---
+date: ${new Date().toISOString().split("T")[0]}
+tags:
+  - ${cfg.company.slug}
+  - agent-design
+  - agent-hub
+---
+
+# ${cfg.company.name} — Agent Design
+
+> Generated ${date} by Agent Hub
+
+## Company
+- **Name:** ${cfg.company.name}
+- **Slug:** ${cfg.company.slug}
+- **Description:** ${cfg.company.description || ""}
+- **Website:** ${cfg.company.website || ""}
+
+## Agent Roster
+
+`;
+  for (const agent of cfg.agents) {
+    const sp = agent.system_prompt || {};
+    md += `### ${agent.display_name || agent.name} — ${agent.role}\n\n`;
+    md += `| Field | Value |\n|-------|-------|\n`;
+    md += `| Role | ${agent.role} |\n`;
+    md += `| Description | ${agent.description || ""} |\n`;
+    md += `| Color | #${agent.color || "3B82F6"} |\n\n`;
+    md += `**Identity:** ${sp.identity || ""}\n\n`;
+    md += `**Responsibilities:**\n${(sp.responsibilities || []).map(r => `- ${r}`).join("\n")}\n\n`;
+    md += `**Boundaries:**\n${(sp.boundaries || []).map(b => `- ${b}`).join("\n")}\n\n`;
+    md += `**Coordination:**\n${(sp.coordination || []).map(c => `- ${c}`).join("\n")}\n\n`;
+    if (agent.cron?.length) {
+      md += `**Cron Jobs:**\n${agent.cron.map(c => `- \`${c.schedule}\` — ${c.description}`).join("\n")}\n\n`;
+    }
+    md += `**Scopes:** ${(agent.slack_scopes || []).join(", ")}\n\n`;
+    md += `---\n\n`;
+  }
+  return md;
+}
+
+function renderDeployReport(cfg, mcpConfigs) {
+  const date = new Date().toISOString();
+  let md = `---
+date: ${date.split("T")[0]}
+tags:
+  - ${cfg.company.slug}
+  - deploy
+  - agent-hub
+---
+
+# ${cfg.company.name} — Deployment Report
+
+> Deployed ${new Date(date).toLocaleString("en-US")} by Agent Hub
+
+## Deployed Agents
+
+| Agent | Role | Slack App | Plist | MCP Server |
+|-------|------|-----------|-------|------------|
+`;
+  for (const agent of cfg.agents) {
+    const agSlug = slug(agent.name);
+    md += `| ${agent.display_name || agent.name} | ${agent.role} | com.${cfg.company.slug}.${agSlug} | \`com.${cfg.company.slug}.${agSlug}.listener.plist\` | slack-${cfg.company.slug} |\n`;
+  }
+
+  md += `\n## MCP Configuration\n\n`;
+  for (const mcp of mcpConfigs) {
+    md += `- \`${mcp.key}\` — \`SLACK_MCP_${cfg.company.slug.toUpperCase()}_XOXB_TOKEN\`\n`;
+  }
+
+  md += `\n## Next Steps\n\n`;
+  md += `1. Restart OpenCode to pick up MCP config changes\n`;
+  md += `2. Invite agents to channels in Slack\n`;
+  md += `3. Test: DM each agent in Slack\n`;
+  md += `4. Monitor logs: \`tail -f ~/Library/Logs/com.${cfg.company.slug}.*.listener.log\`\n`;
+
+  return md;
+}
+
 // ── Main Deploy Loop ─────────────────────────────────
 
 console.log(`\n🚀 Agent Hub Deploy: ${C.name} (${C.slug})\n`);
@@ -490,11 +573,107 @@ for (const mcp of mcpConfigs) {
   }
 }
 
+// ── Post-Deploy: Save Reports to Obsidian ─────────────
+
+console.log(`\n── Obsidian Reports ──`.padEnd(60, "─"));
+
+const vaultPath = INF.obsidian_vault;
+if (vaultPath && !dryRun) {
+  const vaultDir = join(vaultPath, "Skills", C.slug, "Context");
+  mkdirSync(vaultDir, { recursive: true });
+
+  // Save agent design as a report
+  const designMd = renderAgentDesignReport(config);
+  const designPath = join(vaultDir, `agent-design-${new Date().toISOString().split("T")[0]}.md`);
+  writeFileSync(designPath, designMd);
+  console.log(`  ✅ Saved agent design: ${designPath}`);
+
+  // Save deployment record
+  const deployMd = renderDeployReport(config, mcpConfigs);
+  const deployPath = join(vaultDir, `deploy-report-${new Date().toISOString().split("T")[0]}.md`);
+  writeFileSync(deployPath, deployMd);
+  console.log(`  ✅ Saved deploy report: ${deployPath}`);
+} else if (!vaultPath) {
+  console.log(`  ⚠ No obsidian_vault configured — skipping report save`);
+} else {
+  console.log(`  [DRY RUN] Would save reports to Obsidian vault`);
+}
+
+// ── Post-Deploy: Log to Notion Tracker ───────────────
+
+console.log(`\n── Notion Tracker ──`.padEnd(60, "─"));
+
+const notionKey = INF.notion_api_key;
+const trackerDbId = INF.notion_tracker_db_id;
+
+if (notionKey && trackerDbId && !dryRun) {
+  try {
+    // Log each agent deployment
+    for (const agent of config.agents) {
+      const body = {
+        parent: { database_id: trackerDbId },
+        properties: {
+          "Company": { title: [{ text: { content: C.name } }] },
+          "Slug": { rich_text: [{ text: { content: C.slug } }] },
+          "Status": { select: { name: "Deploying" } },
+          "Phase": { select: { name: "Deploy" } },
+          "Agents": { number: config.agents.length },
+          "Event": { rich_text: [{ text: { content: `Agent "${agent.display_name || agent.name}" deployed via agent-hub` } }] },
+          "Last Activity": { date: { start: new Date().toISOString() } },
+          "Notes": { rich_text: [{ text: { content: `Role: ${agent.role}. Slack app created. listener.mjs + plist generated. launchd loaded.` } }] },
+        },
+      };
+
+      // Search for existing entry first
+      const searchRes = await fetch(`https://api.notion.com/v1/databases/${trackerDbId}/query`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${notionKey}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
+        body: JSON.stringify({ filter: { property: "Slug", rich_text: { equals: C.slug } }, page_size: 1 }),
+      });
+      const searchJson = await searchRes.json();
+
+      if (searchJson.results?.length > 0) {
+        // Update existing
+        const pageId = searchJson.results[0].id;
+        await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+          method: "PATCH",
+          headers: { "Authorization": `Bearer ${notionKey}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
+          body: JSON.stringify({ properties: body.properties }),
+        });
+      } else {
+        // Create new
+        await fetch("https://api.notion.com/v1/pages", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${notionKey}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      }
+    }
+    console.log(`  ✅ Logged to Notion Agent Hub Tracker (${trackerDbId})`);
+  } catch (e) {
+    console.error(`  ✗ Notion tracker error: ${e.message}`);
+  }
+} else if (!notionKey) {
+  console.log(`  ⚠ No notion_api_key configured — skipping tracker`);
+} else if (!trackerDbId) {
+  console.log(`  ⚠ No notion_tracker_db_id configured — skipping tracker`);
+} else {
+  console.log(`  [DRY RUN] Would log to Notion tracker`);
+}
+
 // ── Summary ──────────────────────────────────────────
 
 console.log(`\n${"".padEnd(60, "=")}`);
 console.log(`\n✅ Deploy complete for ${C.name}`);
 console.log(`   ${config.agents.length} agents: ${config.agents.map(a => a.name).join(", ")}`);
+
+if (vaultPath) {
+  console.log(`\n📓 Obsidian reports saved to: ${join(vaultPath, "Skills", C.slug, "Context")}`);
+}
+if (notionKey && trackerDbId) {
+  console.log(`📊 Notion tracker updated: ${trackerDbId}`);
+}
+
 console.log(`\nManual steps remaining:`);
 console.log(`  1. Restart OpenCode to pick up MCP config changes`);
 console.log(`  2. Export env var (add to .zshrc if not already):`);
