@@ -1,4 +1,4 @@
-# Agent Hub
+# The Forge
 
 > **GitHub template repository** — click "Use this template" to create your own agent hub.
 
@@ -19,7 +19,7 @@ Research ──────────→ Agent Design ────────
 | 3. Deploy | One command deploys all agents | `./deploy/deploy-all.mjs` | Live agents in Slack + deploy report → Obsidian |
 | 4. Verify | After OpenCode restart, confirm agents operational | `./deploy/verify.mjs` | Verified → Notion set to Live |
 
-Every phase updates the Notion Agent Hub Tracker: `Researching → Designing → Deploying → Live`.
+Every phase updates the Notion The Forge Tracker: `Researching → Designing → Deploying → Live`.
 
 ## Quick Start
 

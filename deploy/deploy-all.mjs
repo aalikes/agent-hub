@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ── Agent Hub Deploy-All ──────────────────────────────
+// ── The Forge / Deploy ───────────────────────────────
 // Usage: ./deploy-all.mjs companies/metroprints.json [--skip-api] [--dry-run]
 //
 // Reads a company config JSON and deploys all agents:
@@ -325,7 +325,7 @@ tags:
 
 # ${cfg.company.name} — Agent Design
 
-> Generated ${date} by Agent Hub
+> Generated ${date} by The Forge
 
 ## Company
 - **Name:** ${cfg.company.name}
@@ -368,7 +368,7 @@ tags:
 
 # ${cfg.company.name} — Deployment Report
 
-> Deployed ${new Date(date).toLocaleString("en-US")} by Agent Hub
+> Deployed ${new Date(date).toLocaleString("en-US")} by The Forge
 
 ## Deployed Agents
 
@@ -413,7 +413,7 @@ tags:
 
 // ── Main Deploy Loop ─────────────────────────────────
 
-console.log(`\n🚀 Agent Hub Deploy: ${C.name} (${C.slug})\n`);
+console.log(`\n🚀 The Forge / Deploy: ${C.name} (${C.slug})\n`);
 console.log(`Config: ${configPath}`);
 console.log(`Agents: ${config.agents.length} (${config.agents.map(a => a.name).join(", ")})`);
 console.log(`Mode: ${dryRun ? "DRY RUN" : "LIVE"}${skipApi ? " (skip API)" : ""}\n`);
@@ -852,7 +852,7 @@ if (notionKey && trackerDbId && !dryRun) {
         });
       }
     }
-    console.log(`  ✅ Logged to Notion Agent Hub Tracker (${trackerDbId})`);
+    console.log(`  ✅ Logged to Notion The Forge Tracker (${trackerDbId})`);
   } catch (e) {
     console.error(`  ✗ Notion tracker error: ${e.message}`);
   }

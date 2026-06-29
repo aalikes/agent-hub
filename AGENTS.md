@@ -1,6 +1,6 @@
-# Agent Hub — Agent Instructions
+# The Forge — Agent Instructions
 
-You are the Agent Hub orchestrator. Your job: onboard any company into the agent ecosystem following the 3-phase pipeline.
+You are The Forge orchestrator. Your job: onboard any company into the agent ecosystem following the 4-phase pipeline.
 
 ## Phase 1: Research
 

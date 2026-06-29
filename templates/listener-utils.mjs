@@ -1,4 +1,4 @@
-// ── Agent Hub Listener Utilities ────────────────────
+// ── The Forge Listener Utilities ────────────────────
 // Shared by all agents. Imported by listener.mjs.
 //
 // Provides:
@@ -125,7 +125,7 @@ tags:
 // ── Notion Tracking ──────────────────────────────────
 
 /**
- * Log an event to the Agent Hub Tracker Notion database.
+ * Log an event to The Forge Tracker Notion database.
  *
  * @param {object} entry
  * @param {string} entry.company - Company name
@@ -134,7 +134,7 @@ tags:
  * @param {string} entry.event - What happened (e.g. "Research completed", "Agents deployed")
  * @param {object} entry.details - Additional details (agent count, report path, etc.)
  * @param {string} apiKey - Notion API key
- * @param {string} databaseId - Agent Hub Tracker database ID
+ * @param {string} databaseId - The Forge Tracker database ID
  * @returns {Promise<{ok: boolean}>}
  */
 export async function logToNotion(entry, apiKey, databaseId) {
@@ -224,7 +224,7 @@ export async function createAgentHubTracker(apiKey, parentPageId) {
       headers,
       body: JSON.stringify({
         parent: { type: "page_id", page_id: parentPageId },
-        title: [{ type: "text", text: { content: "Agent Hub Tracker" } }],
+        title: [{ type: "text", text: { content: "The Forge Tracker" } }],
         properties: {
           "Company": { title: {} },
           "Slug": { rich_text: {} },
@@ -252,7 +252,7 @@ export async function createAgentHubTracker(apiKey, parentPageId) {
 
     const json = await res.json();
     if (json.id) {
-      console.log(`[notion] Created Agent Hub Tracker: ${json.id}`);
+      console.log(`[notion] Created The Forge Tracker: ${json.id}`);
       return json.id;
     } else {
       console.error(`[notion] Failed to create tracker:`, JSON.stringify(json));
@@ -340,7 +340,7 @@ export async function healthCheck({ slackApi, agentName, botUserId }) {
 export function compileResearchReport(companyName, results) {
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   let md = `# ${companyName} — Deep-Dive Research Report\n\n`;
-  md += `> Compiled ${date} by Agent Hub Research Pipeline\n\n`;
+  md += `> Compiled ${date} by The Forge Research Pipeline\n\n`;
   md += `---\n\n`;
 
   for (const r of results) {

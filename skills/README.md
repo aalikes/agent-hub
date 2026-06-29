@@ -1,4 +1,4 @@
-# Agent Hub Skills
+# The Forge Skills
 
 Obsidian vault skills that agents load at startup. Copy relevant skill files here and reference them in the agent's `KNOWLEDGE_FILES` env var.
 

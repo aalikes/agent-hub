@@ -1,4 +1,4 @@
-# Agent Hub Tracker — Notion Database Schema
+# The Forge Tracker — Notion Database Schema
 
 Database to track every company going through the agent hub pipeline: Research → Design → Deploy → Live.
 
@@ -25,7 +25,7 @@ curl -X POST https://api.notion.com/v1/databases \
   -H "Content-Type: application/json" \
   -d '{
     "parent": { "type": "page_id", "page_id": "YOUR_PARENT_PAGE_ID" },
-    "title": [{ "type": "text", "text": { "content": "Agent Hub Tracker" } }],
+    "title": [{ "type": "text", "text": { "content": "The Forge Tracker" } }],
     "properties": {
       "Company": { "title": {} },
       "Slug": { "rich_text": {} },
@@ -53,7 +53,7 @@ curl -X POST https://api.notion.com/v1/databases \
 
 ## Programmatic Creation
 
-The `listener-utils.mjs` includes `createAgentHubTracker(apiKey, parentPageId)` that creates this database via the Notion API. The `deploy-all.mjs` also has a `--create-tracker` flag.
+The `listener-utils.mjs` includes `createAgentHubTracker(apiKey, parentPageId)` that creates this database via the Notion API. The `deploy-all.mjs` logs to it automatically.
 
 ```javascript
 import { createAgentHubTracker } from "./listener-utils.mjs";

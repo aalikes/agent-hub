@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ── Agent Hub Verify ─────────────────────────────────
+// ── The Forge / Verify ───────────────────────────────
 // Usage: ./verify.mjs companies/my-company.json [--dry-run]
 //
 // After OpenCode restart, confirms agents are operational:
@@ -42,7 +42,7 @@ function slug(s) { return s.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-
 
 // ── 1. Check launchd Status ──────────────────────────
 
-console.log(`\n🔍 Agent Hub Verify: ${C.name}\n`);
+console.log(`\n🔍 The Forge / Verify: ${C.name}\n`);
 console.log(`── launchd Status ──`.padEnd(60, "─"));
 
 const launchdChecks = [];
