@@ -17,6 +17,7 @@ Research ──────────→ Agent Design ────────
 | 1. Research | Spawn 4 parallel agents investigating company, industry, workflow | `./deploy/research.mjs` | Research report → Obsidian |
 | 2. Design | LLM analyzes research, generates agent definitions | `./deploy/design.mjs` | Company config JSON + agent design → Obsidian |
 | 3. Deploy | One command deploys all agents | `./deploy/deploy-all.mjs` | Live agents in Slack + deploy report → Obsidian |
+| 4. Verify | After OpenCode restart, confirm agents operational | `./deploy/verify.mjs` | Verified → Notion set to Live |
 
 Every phase updates the Notion Agent Hub Tracker: `Researching → Designing → Deploying → Live`.
 
@@ -27,7 +28,7 @@ Every phase updates the Notion Agent Hub Tracker: `Researching → Designing →
 cp companies/seed.json companies/my-company.json
 # Edit: company name, description, website, and API keys
 
-# 2. Research — 5 parallel agents investigate your company & industry
+# 2. Research — 4 parallel agents investigate your company & industry
 ./deploy/research.mjs companies/my-company.json
 
 # 3. Design — LLM reads research, generates agent definitions
@@ -35,6 +36,11 @@ cp companies/seed.json companies/my-company.json
 
 # 4. Deploy — one command, everything else
 ./deploy/deploy-all.mjs companies/my-company-generated.json
+
+# 5. Restart OpenCode (MCP changes need restart)
+
+# 6. Verify — re-run tests, mark Live
+./deploy/verify.mjs companies/my-company-generated.json
 
 # 5. Restart OpenCode (MCP changes need restart)
 # 6. Test: DM each agent in Slack
@@ -77,6 +83,16 @@ cp companies/seed.json companies/my-company.json
 | Save deploy report to Obsidian | ✅ |
 | Log to Notion: Status → Deploying (with test results) | ✅ |
 | Restart OpenCode | ❌ Manual (one step) |
+
+### Phase 4 — `verify.mjs`
+
+| Step | Auto |
+|------|------|
+| Check launchd status for all agents | ✅ |
+| Re-run cross-agent tests (8s wait for responses) | ✅ |
+| Post all-clear message to agent coordination channel | ✅ |
+| Save verification report to Obsidian | ✅ |
+| Update Notion tracker: Status → Live | ✅ (if all tests pass) |
 
 ## Files
 
