@@ -52,10 +52,17 @@ cp companies/seed.json companies/my-company.json
 
 | Step | Auto |
 |------|------|
-| Spawn 4 DeepSeek sub-agents (Market+Risk, Workflow, Tech, Customer) | ✅ |
+| Standard mode: 4 DeepSeek sub-agents (Market, Workflow, Tech, Customer) | ✅ |
+| Deep mode: `--deep` flag — 8 sub-agents (Market, Demographics, Regulatory, Workflow, Tech, Revenue, Customer, Content) | ✅ |
 | Compile results into structured markdown report | ✅ |
 | Save to Obsidian: `vault/company/Context/research-report-{date}.md` | ✅ |
 | Log to Notion: Status → Researching | ✅ |
+
+Usage:
+```bash
+./research.mjs companies/my-company.json           # Quick: 4 agents, ~30s
+./research.mjs companies/my-company.json --deep    # Full: 8 agents, ~90s
+```
 
 ### Phase 2 — `design.mjs`
 
