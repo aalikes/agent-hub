@@ -7,7 +7,7 @@
 // and generates a complete company config JSON with agent definitions.
 // Saves agent design to Obsidian and logs to Notion tracker.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -51,16 +51,21 @@ function findResearchReport() {
   }
 
   // Find the latest research report
-  let files;
+  let researchFiles = [];
   try {
-    files = readFileSync(dir, "utf-8"); // reads directory listing — won't work
-    // Actually need a different approach
-  } catch {}
+    const entries = readdirSync(dir);
+    researchFiles = entries
+      .filter(f => f.match(/^research-report-\d{4}-\d{2}-\d{2}\.md$/))
+      .sort()
+      .reverse(); // newest first
+  } catch (e) {
+    // fallback: try today's date
+  }
 
-  // Use a known filename pattern
-  const date = new Date().toISOString().split("T")[0];
+  // Try newest matching file first, then today, then generic
   const candidates = [
-    join(dir, `research-report-${date}.md`),
+    ...researchFiles.map(f => join(dir, f)),
+    join(dir, `research-report-${new Date().toISOString().split("T")[0]}.md`),
     join(dir, "research-report.md"),
   ];
 
@@ -70,13 +75,8 @@ function findResearchReport() {
     }
   }
 
-  // Fallback: accept report path from config or stdin
-  if (INF.research_report_path && existsSync(INF.research_report_path)) {
-    return readFileSync(INF.research_report_path, "utf-8");
-  }
-
   console.error(`No research report found in ${dir}`);
-  console.error(`Expected: research-report-${date}.md`);
+  console.error(`Expected: research-report-*.md`);
   console.error(`Or set infrastructure.research_report_path in config`);
   return null;
 }
