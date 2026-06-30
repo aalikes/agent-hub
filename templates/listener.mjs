@@ -33,7 +33,7 @@ const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
 const SLACK_API = "https://slack.com/api";
 const NOTION_KEY = process.env.NOTION_API_KEY || "{{NOTION_API_KEY}}";
 const NOTION_VERSION = "2022-06-28";
-const NOTION_DATABASES = JSON.parse(process.env.NOTION_DATABASES || "{{NOTION_DATABASES}}" || "{}");
+const NOTION_DATABASES = (() => { try { return JSON.parse(process.env.NOTION_DATABASES || ""); } catch { return {}; } })();
 const OBSIDIAN_VAULT = process.env.OBSIDIAN_VAULT || "{{OBSIDIAN_VAULT}}";
 const KNOWLEDGE_FILES = (process.env.KNOWLEDGE_FILES || "{{KNOWLEDGE_FILES}}").split(",").filter(Boolean);
 
@@ -59,7 +59,7 @@ function isDuplicate(channel, user, ts) {
   return false;
 }
 
-// ── Active Conversations (30-min window) ─────────────
+// ── Active Conversations (30-sec DM window, 30-min thread window) ─
 
 const activeThreads = new Map();
 const activeDms = new Map(); // channel -> timestamp, for DM no-@mention window
@@ -77,8 +77,8 @@ function trackDm(channel) {
   activeDms.set(channel, Date.now());
   setTimeout(() => {
     const last = activeDms.get(channel);
-    if (last && Date.now() - last >= 30 * 60 * 1000) activeDms.delete(channel);
-  }, 30 * 60 * 1000);
+    if (last && Date.now() - last >= 30 * 1000) activeDms.delete(channel);
+  }, 30 * 1000);
 }
 
 function isActiveThread(event) {
@@ -121,8 +121,15 @@ async function getWebSocketUrl() {
   return res.url;
 }
 
+// Update AGENT_IDS with all agent bot user IDs for inter-agent awareness
+const AGENT_IDS = "{{AGENT_IDS}}".split(",").filter(Boolean);
+
 function isMentioned(text) {
-  return text.includes(`<@${BOT_USER_ID}>`);
+  if (text.includes(`<@${BOT_USER_ID}>`)) return true;
+  for (const id of AGENT_IDS) {
+    if (id && id !== BOT_USER_ID && text.includes(`<@${id}>`)) return true;
+  }
+  return false;
 }
 
 function cleanText(text) {
@@ -166,7 +173,7 @@ function loadKnowledge() {
     if (existsSync(path)) {
       try {
         const content = readFileSync(path, "utf-8");
-        parts.push(`### ${file.replace(".md", "")}\n${content.substring(0, 3000)}`);
+        parts.push(`### ${file.replace(".md", "")}\n${content.substring(0, 1500)}`);
         console.log(`[${AGENT_NAME}] Loaded knowledge: ${file}`);
       } catch (e) {
         console.error(`[${AGENT_NAME}] Failed to read ${file}:`, e.message);
@@ -207,11 +214,17 @@ const BASE_SYSTEM_PROMPT = `You are {{AGENT_DISPLAY_NAME}}, the {{COMPANY_NAME}}
 {{AGENT_PERSONALITY}}`;
 
 function buildSystemPrompt() {
+  const now = new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
   return `${BASE_SYSTEM_PROMPT}
+
+## Current Date & Time
+It is now **${now}**. Use this for all date calculations. Do NOT guess the date.
 
 ## Obsidian Knowledge (live from vault)
 ${loadedKnowledge || "(no knowledge loaded)"}`;
 }
+
+const FALLBACK_REPLY = (name) => `Hey ${name}! I'm ${AGENT_DISPLAY_NAME}, ${AGENT_ROLE} for ${COMPANY_NAME}. How can I help?`;
 
 // ── LLM ────────────────────────────────────────────
 
@@ -234,7 +247,7 @@ async function think(messages) {
 
 // ── Context Fetch ───────────────────────────────────
 
-async function fetchContext(channel, thread, count = 40) {
+async function fetchContext(channel, thread, count = 10) {
   try {
     const params = { channel, limit: count };
     if (thread) params.ts = thread;
@@ -262,7 +275,7 @@ async function fetchContext(channel, thread, count = 40) {
 
 async function foldContext(messages) {
   const estimateTokens = (arr) => arr.reduce((sum, m) => sum + Math.ceil((m.content?.length || 0) / 4), 0);
-  if (estimateTokens(messages) < 15000) return messages;
+  if (estimateTokens(messages) < 8000) return messages;
   const split = Math.floor(messages.length * 0.6);
   if (split < 4) return messages;
   const toSummarize = messages.slice(0, split);
@@ -329,15 +342,17 @@ async function postAlert(severity, message, source = "") {
 
 async function handle(channel, user, text, thread) {
   try {
-    let userName = "there";
+    let userName = "";
     try {
-      const u = await slackApi("users.info", { user });
-      if (u.ok && u.user?.real_name) userName = u.user.real_name;
+      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
+      const u = await Promise.race([slackApi("users.info", { user }), timeout]);
+      if (u?.ok && u.user?.real_name) userName = u.user.real_name;
     } catch (e) {
-      console.error(`[${AGENT_NAME}] users.info error:`, e.message);
+      // users.info failed — proceed without name
     }
+    const displayName = userName || "someone";
 
-    console.log(`[${AGENT_NAME}] Handling "${text.substring(0, 60)}" from ${userName}`);
+    console.log(`[${AGENT_NAME}] Handling "${text.substring(0, 60)}" from ${displayName}`);
 
     // Check for sub-agent spawn request
     if (text.toLowerCase().includes("spawn") && (text.toLowerCase().includes("agent") || text.toLowerCase().includes("research"))) {
@@ -350,13 +365,14 @@ async function handle(channel, user, text, thread) {
       
       // Delegate to sub-agents
       const result = await spawnSubAgent(
-        `The user ${userName} asked: "${text}". Execute this task thoroughly. Return specific, actionable results.`,
+        `The user ${displayName} asked: "${text}". Execute this task thoroughly. Return specific, actionable results.`,
         { role: `${AGENT_DISPLAY_NAME} Sub-Agent`, apiKey: DEEPSEEK_KEY, maxTokens: 2500 }
       );
       
       await slackApi("chat.postMessage", {
         channel,
         text: result.text,
+        thread_ts: thread,
         unfurl_links: false,
         unfurl_media: false,
       });
@@ -369,7 +385,7 @@ async function handle(channel, user, text, thread) {
     const messages = [
       { role: "system", content: buildSystemPrompt() },
       ...prior,
-      { role: "user", content: `[${userName}]: ${text}` },
+      { role: "user", content: `[${displayName}]: ${text}` },
     ];
 
     const folded = await foldContext(messages);
@@ -379,10 +395,10 @@ async function handle(channel, user, text, thread) {
     if (llmReply) {
       reply = llmReply;
     } else {
-      reply = `Hey ${userName.split(" ")[0]}! I'm ${AGENT_DISPLAY_NAME}, ${AGENT_ROLE} for ${COMPANY_NAME}. {{AGENT_FALLBACK}}`;
+      reply = FALLBACK_REPLY(displayName.split(" ")[0]);
     }
 
-    await slackApi("chat.postMessage", { channel, text: reply, unfurl_links: false, unfurl_media: false });
+    await slackApi("chat.postMessage", { channel, text: reply, thread_ts: thread, unfurl_links: false, unfurl_media: false });
     trackThread(thread);
     console.log(`[${AGENT_NAME}] Replied in ${channel}`);
   } catch (e) {
@@ -611,6 +627,7 @@ async function connect() {
   ws.onmessage = async (event) => {
     try {
       const msg = JSON.parse(event.data);
+      console.log(`[${AGENT_NAME}] recv type=${msg.type}`);
 
       if (msg.type === "hello") {
         console.log(`[${AGENT_NAME}] Hello, connections: ${msg.num_connections}`);
@@ -636,13 +653,6 @@ async function connect() {
 
         // Thread continuation (30-min window, no @mention needed)
         if (evt.type === "message" && isActiveThread(evt) && text.trim()) {
-          await handle(evt.channel, evt.user, cleanText(text), evt.ts);
-          return;
-        }
-
-        // DM conversation mode — respond without @mention for 30 seconds after last interaction
-        if (evt.channel.startsWith("D") && evt.type === "message" && isActiveDm(evt.channel) && text.trim()) {
-          if (isDuplicate(evt.channel, evt.user, evt.ts)) return;
           await handle(evt.channel, evt.user, cleanText(text), evt.ts);
           return;
         }
