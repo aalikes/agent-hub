@@ -1,0 +1,31 @@
+{
+  "_comment": "African Club Dances — seed config for The Forge pipeline",
+  "company": {
+    "name": "African Club Dances",
+    "slug": "acd",
+    "description": "A cultural movement celebrating African and Caribbean dance through live classes, digital content, creator partnerships, merchandise, and events. Operating in NYC (Harlem, Midtown, Brooklyn) with planned expansion to Montreal and Miami. Revenue model: drop-in classes ($20/pp), class packages ($70 for 4), unlimited monthly memberships ($99), online content subscriptions, film & TV licensing, studio rentals, and merchandise. 8+ classes/month across multiple NYC locations, 15-20 students per class. Proven financial model: Year 1 target $111K revenue ($79K net), Year 2 $223K revenue ($197K net). Break-even at Month 4. Website: https://africanclubdances.com. Social: @africanclubdances on Instagram, YouTube, TikTok, Facebook.",
+    "website": "https://africanclubdances.com"
+  },
+  "infrastructure": {
+    "deepseek_api_key": "{env:DEEPSEEK_API_KEY}",
+    "obsidian_vault": "/Users/shahsaint-cyr/Library/Mobile Documents/iCloud~md~obsidian/Documents/Skills",
+    "notion_api_key": "{env:NOTION_API_KEY}",
+    "notion_tracker_db_id": "NOTION_TRACKER_DB_ID_HERE",
+    "knowledge_files": [
+      "Skills/African-Club-Dances/README.md",
+      "Skills/African-Club-Dances/Context/strategy.md",
+      "Skills/African-Club-Dances/Context/brand.md",
+      "Skills/African-Club-Dances/Context/operator.md",
+      "Skills/African-Club-Dances/Context/stakeholders.md",
+      "Skills/African-Club-Dances/Context/organisation.md",
+      "Skills/African-Club-Dances/Context/pain-points.md",
+      "Skills/African-Club-Dances/playbooks/runbooks.md"
+    ]
+  },
+  "channels": {
+    "critical": "acd-critical",
+    "alerts": "acd-alerts",
+    "general": "acd-general"
+  },
+  "agentCount": 7
+}

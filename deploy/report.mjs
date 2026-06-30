@@ -112,6 +112,19 @@ if (C.website) {
 
 function renderHtml(researchMd, websiteData, config) {
   const C = config.company;
+  const agents = config.agents || [];
+  const byRole = {};
+  for (const a of agents) {
+    if (a.role?.includes("opera")) byRole.ops = a;
+    else if (a.role?.includes("financ") || a.role?.includes("revenu")) byRole.finance = a;
+    else if (a.role?.includes("communit") || a.role?.includes("member")) byRole.community = a;
+    else if (a.role?.includes("complian") || a.role?.includes("regulat")) byRole.compliance = a;
+    else byRole.general = a;
+  }
+  const A1 = byRole.ops?.display_name || "Atlas";
+  const A2 = byRole.finance?.display_name || "Penny";
+  const A3 = byRole.community?.display_name || "Sage";
+  const A4 = byRole.compliance?.display_name || "Boukman";
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const isoDate = new Date().toISOString().split("T")[0];
   const slug = C.slug || C.name.toLowerCase().replace(/[^a-z]+/g, "-");
@@ -120,7 +133,7 @@ function renderHtml(researchMd, websiteData, config) {
   const sections = parseResearchSections(researchMd);
   
   // Generate agent requirements
-  const agentReqs = generateAgentRequirements(sections, websiteData);
+  const agentReqs = generateAgentRequirements(sections, websiteData, config);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -346,10 +359,10 @@ ${renderSection(sections, "Revenue")}
 <table>
   <thead><tr><th>Gap</th><th>Severity</th><th>Opportunity</th><th>Agent Needed?</th></tr></thead>
   <tbody>
-    <tr><td>No automated onboarding for marketplace sellers</td><td><span class="tag tag-red">High</span></td><td>AI agent validates sellers, sends welcome docs, tracks listing quality</td><td>✅ Atlas</td></tr>
-    <tr><td>No payment monitoring or revenue tracking</td><td><span class="tag tag-red">High</span></td><td>AI agent monitors Stripe/PayPal, flags anomalies, reports revenue</td><td>✅ Penny</td></tr>
-    <tr><td>No automated member engagement</td><td><span class="tag tag-orange">Medium</span></td><td>AI agent sends personalized updates, tracks inactivity, welcomes new members</td><td>✅ Sage</td></tr>
-    <tr><td>No FAQ/triage for platform questions</td><td><span class="tag tag-orange">Medium</span></td><td>AI agent answers common questions, routes complex issues</td><td>✅ Echo</td></tr>
+    <tr><td>No automated onboarding for marketplace sellers</td><td><span class="tag tag-red">High</span></td><td>AI agent validates sellers, sends welcome docs, tracks listing quality</td><td>✅ ${A1}</td></tr>
+    <tr><td>No payment monitoring or revenue tracking</td><td><span class="tag tag-red">High</span></td><td>AI agent monitors Stripe/PayPal, flags anomalies, reports revenue</td><td>✅ ${A2}</td></tr>
+    <tr><td>No automated member engagement</td><td><span class="tag tag-orange">Medium</span></td><td>AI agent sends personalized updates, tracks inactivity, welcomes new members</td><td>✅ ${A3}</td></tr>
+    <tr><td>No compliance monitoring (HIPAA, PCI, GDPR)</td><td><span class="tag tag-red">High</span></td><td>AI agent monitors regulatory deadlines, flags compliance gaps</td><td>✅ ${A4}</td></tr>
     <tr><td>No content scheduling or SEO optimization</td><td><span class="tag tag-orange">Medium</span></td><td>AI agent drafts content, optimizes for search, schedules posts</td><td>⚠ Consider: Muse (content)</td></tr>
     <tr><td>No event management automation</td><td><span class="tag tag-green">Low</span></td><td>AI agent sends reminders, tracks RSVPs, manages calendar</td><td>⚠ Consider: additional agent</td></tr>
     <tr><td>No compliance monitoring (HIPAA, PCI, GDPR)</td><td><span class="tag tag-red">High</span></td><td>AI agent monitors regulatory deadlines, flags compliance gaps</td><td>⚠ Consider: Aegis (compliance)</td></tr>
@@ -472,6 +485,19 @@ function renderSection(sections, keyword) {
 }
 
 function generateAgentRequirements(sections, websiteData) {
+  const features = websiteData.features || [];
+  const agents = config.agents || [];
+  const byRole = {};
+  for (const a of agents) {
+    if (a.role?.includes("opera")) byRole.ops = a;
+    else if (a.role?.includes("financ") || a.role?.includes("revenu")) byRole.finance = a;
+    else if (a.role?.includes("communit") || a.role?.includes("member")) byRole.community = a;
+    else if (a.role?.includes("complian") || a.role?.includes("regulat")) byRole.compliance = a;
+  }
+  const A1 = byRole.ops?.display_name || "Atlas";
+  const A2 = byRole.finance?.display_name || "Penny";
+  const A3 = byRole.community?.display_name || "Sage";
+  const A4 = byRole.compliance?.display_name || "Boukman";
   // Analyze sections and website data to determine agent needs
   const features = websiteData.features || [];
   const hasMarketplace = features.some(f => /marketplace|shop|buy|sell/i.test(f));
@@ -488,7 +514,7 @@ function generateAgentRequirements(sections, websiteData) {
   // Core agents (always needed)
   html += `
 <div class="agent-req">
-  <h4>1. Atlas — Operations &amp; Case Management Agent</h4>
+  <h4>1. ${A1} — Operations &amp; Case Management Agent</h4>
   <p><strong>Role:</strong> Manages end-to-end workflows across all platform pillars.</p>
   <p><strong>Why needed:</strong> With ${features.length} platform features running simultaneously, manual case management is unsustainable. ${hasMarketplace ? "Marketplace sellers need onboarding, verification, and support." : ""} ${hasEvents ? "Events need scheduling, reminders, and attendee tracking." : ""}</p>
   <div class="scope">
@@ -497,7 +523,7 @@ function generateAgentRequirements(sections, websiteData) {
 </div>
 
 <div class="agent-req">
-  <h4>2. Penny — Finance &amp; Revenue Agent</h4>
+  <h4>2. ${A2} — Finance &amp; Revenue Agent</h4>
   <p><strong>Role:</strong> Monitors all revenue streams, detects anomalies, reports financial health.</p>
   <p><strong>Why needed:</strong> Revenue flows through ${hasMarketplace ? "marketplace transactions" : ""}${hasCrowdfunding ? ", crowdfunding donations" : ""}${hasSponsorships ? ", sponsorship payments" : ""}${hasCreator ? ", creator payouts" : ""}. Without automated monitoring, fraud, payment failures, and revenue leakage go undetected.</p>
   <div class="scope">
@@ -506,7 +532,7 @@ function generateAgentRequirements(sections, websiteData) {
 </div>
 
 <div class="agent-req">
-  <h4>3. Sage — Community &amp; Membership Agent</h4>
+  <h4>3. ${A3} — Community &amp; Membership Agent</h4>
   <p><strong>Role:</strong> Nurtures community engagement, welcomes new members, drives retention.</p>
   <p><strong>Why needed:</strong> ${hasCommunity ? "Active community forum with 2+ years of posts needs moderation, engagement prompts, and inactive member re-engagement." : ""} ${hasContent ? "Blog readership needs newsletter automation and personalized content recommendations." : ""} Growth from 115 to 1,000+ members requires automated community management.</p>
   <div class="scope">
@@ -515,11 +541,11 @@ function generateAgentRequirements(sections, websiteData) {
 </div>
 
 <div class="agent-req">
-  <h4>4. Echo — General Assistant &amp; Triage Agent</h4>
+  <h4>4. ${A4} — Compliance &amp; Regulatory Agent</h4>
   <p><strong>Role:</strong> Answers FAQs, routes inquiries, provides platform navigation support.</p>
-  <p><strong>Why needed:</strong> With ${features.length} platform pillars, new users arrive with questions about marketplace selling, creator tools, event posting, business listings, and crowdfunding. A single AI agent can answer 80%+ of common questions, routing the rest to Atlas, Penny, or Sage.</p>
+  <p><strong>Why needed:</strong> With ${features.length} platform pillars, new users arrive with questions about everything. Each agent handles their own domain — no separate triage agent needed. ${A1} owns operations, ${A2} owns finance, ${A3} owns community, ${A4} owns compliance.</p>
   <div class="scope">
-    <strong>Scope:</strong> FAQ responses, @mention handling in Slack, routing to specialized agents, platform documentation maintenance, common question logging.
+    <strong>Scope:</strong> Regulatory compliance monitoring (HIPAA, PCI DSS, GDPR/CCPA), policy enforcement, content moderation flags, data handling audits, compliance documentation.
   </div>
 </div>
 `;
@@ -553,20 +579,16 @@ function generateAgentRequirements(sections, websiteData) {
 <h3>Agent Interaction Map</h3>
 <pre style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:0.8rem;overflow-x:auto;margin:1rem 0;color:var(--text)">
 
-  User Inquiry → Echo (triage)
-                    ├── "How do I sell?" → Atlas (ops)
-                    ├── "Where's my payment?" → Penny (finance)
-                    ├── "How do I join?" → Sage (community)
-                    ├── "When's the next event?" → Atlas
-                    └── "Is this legal?" → Aegis (compliance)
+  User Inquiry → ${A1} (ops)
+                    ├── Financial question → ${A2}
+                    ├── Community question → ${A3}
+                    └── Compliance question → ${A4}
 
   Cron Workflows:
-    Atlas ─── daily standup, Friday cleanup
-    Penny ─── daily payment check, weekly revenue report, monthly reconciliation
-    Sage  ─── daily welcome check, weekly newsletter, monthly member spotlight
-    Echo  ─── morning greeting, end-of-day summary, weekly FAQ update
-    Muse  ─── weekly content calendar, SEO audit
-    Aegis ─── weekly compliance scan, monthly regulatory update
+    ${A1} ─── daily standup, weekly audit, intern checkpoint
+    ${A2} ─── daily revenue, weekly invoices, monthly report
+    ${A3} ─── daily welcome, weekly engagement, monthly newsletter
+    ${A4} ─── weekly compliance scan, daily policy review, monthly regulatory update
 </pre>
 `;
 
@@ -627,31 +649,25 @@ ${features.map(f => `- ${f}`).join("\n")}
 
 ## Required Agents
 
-### 1. Atlas — Operations & Case Management
+### 1. ${A1} — Operations & Case Management
 Manages end-to-end workflows: seller onboarding & verification, listing quality, event scheduling, task tracking, SLA monitoring.
 
-### 2. Penny — Finance & Revenue
+### 2. ${A2} — Finance & Revenue
 Monitors Stripe/PayPal transactions, revenue reporting by stream, anomaly detection, sponsorship tracking & renewals.
 
-### 3. Sage — Community & Membership
+### 3. ${A3} — Community & Membership
 Member onboarding, engagement tracking, inactivity detection, newsletter automation, community moderation.
 
-### 4. Echo — General Assistant & Triage
-FAQ responses, routing to specialized agents, platform documentation, common question logging.
-
-${features.some(f => /blog|news/i.test(f)) ? `### 5. Muse — Content & Media [RECOMMENDED]
-Content calendar, SEO optimization, social media scheduling, podcast distribution, content analytics.` : ""}
-
-${features.some(f => /health|doctor/i.test(f)) ? `### 6. Aegis — Compliance & Regulatory [RECOMMENDED]
-HIPAA compliance, PCI DSS audit prep, GDPR/CCPA data handling, insurance tracking, regulatory change alerts.` : ""}
+### 4. ${A4} — Compliance & Regulatory
+HIPAA compliance, PCI DSS audit prep, GDPR/CCPA data handling, insurance tracking, regulatory change alerts.
 
 ## Agent Interaction Map
 \`\`\`
-User → Echo (triage) → Atlas (ops) / Penny (finance) / Sage (community) / Aegis (compliance)
+User → ${A1} (ops) / ${A2} (finance) / ${A3} (community) / ${A4} (compliance)
 \`\`\`
 
 ## Design Notes for design.mjs
-- All agents must coordinate: Echo routes, others execute
+- All agents handle their own domain + @mentions — no separate triage agent
 - Every agent needs Slack channel access (private #hcc-agents)
 - Focus on automation over notification — agents should DO, not just alert
 - Platform-specific: marketplace, creator studio, community forum, directory, events, crowdfunding

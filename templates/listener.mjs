@@ -59,9 +59,11 @@ function isDuplicate(channel, user, ts) {
   return false;
 }
 
-// ── Active Threads (30-min window) ──────────────────
+// ── Active Conversations (30-min window) ─────────────
 
 const activeThreads = new Map();
+const activeDms = new Map(); // channel -> timestamp, for DM no-@mention window
+
 function trackThread(threadTs) {
   if (!threadTs) return;
   activeThreads.set(threadTs, Date.now());
@@ -70,6 +72,15 @@ function trackThread(threadTs) {
     if (last && Date.now() - last >= 30 * 60 * 1000) activeThreads.delete(threadTs);
   }, 30 * 60 * 1000);
 }
+
+function trackDm(channel) {
+  activeDms.set(channel, Date.now());
+  setTimeout(() => {
+    const last = activeDms.get(channel);
+    if (last && Date.now() - last >= 30 * 60 * 1000) activeDms.delete(channel);
+  }, 30 * 60 * 1000);
+}
+
 function isActiveThread(event) {
   const threadTs = event.thread_ts || event.ts;
   if (activeThreads.has(threadTs)) {
@@ -81,6 +92,14 @@ function isActiveThread(event) {
       activeThreads.set(key, Date.now());
       return true;
     }
+  }
+  return false;
+}
+
+function isActiveDm(channel) {
+  if (activeDms.has(channel)) {
+    activeDms.set(channel, Date.now());
+    return true;
   }
   return false;
 }
@@ -325,7 +344,6 @@ async function handle(channel, user, text, thread) {
       await slackApi("chat.postMessage", {
         channel,
         text: `🔄 Spawning sub-agents for that task. I'll report back when they're done.`,
-        thread_ts: thread,
         unfurl_links: false,
         unfurl_media: false,
       });
@@ -339,7 +357,6 @@ async function handle(channel, user, text, thread) {
       await slackApi("chat.postMessage", {
         channel,
         text: result.text,
-        thread_ts: thread,
         unfurl_links: false,
         unfurl_media: false,
       });
@@ -365,13 +382,13 @@ async function handle(channel, user, text, thread) {
       reply = `Hey ${userName.split(" ")[0]}! I'm ${AGENT_DISPLAY_NAME}, ${AGENT_ROLE} for ${COMPANY_NAME}. {{AGENT_FALLBACK}}`;
     }
 
-    await slackApi("chat.postMessage", { channel, text: reply, thread_ts: thread, unfurl_links: false, unfurl_media: false });
+    await slackApi("chat.postMessage", { channel, text: reply, unfurl_links: false, unfurl_media: false });
     trackThread(thread);
     console.log(`[${AGENT_NAME}] Replied in ${channel}`);
   } catch (e) {
     console.error(`[${AGENT_NAME}] handle error:`, e.message);
     try {
-      await slackApi("chat.postMessage", { channel, text: "Sorry, something went wrong. Try again?", thread_ts: thread, unfurl_links: false, unfurl_media: false });
+      await slackApi("chat.postMessage", { channel, text: "Sorry, something went wrong. Try again?", unfurl_links: false, unfurl_media: false });
       trackThread(thread);
     } catch {}
   }
@@ -519,7 +536,7 @@ function startCron() {
 /**
  * Parse a 5-field cron expression and return ms until next trigger.
  * Supports: minute hour day-of-month month day-of-week
- * Also supports: */N syntax for intervals
+ * Also supports interval notation like "0 asterisk-slash-6 asterisk asterisk asterisk asterisk" for every 6 hours.
  */
 function nextCronTime(expr) {
   const parts = expr.trim().split(/\s+/);
@@ -528,7 +545,7 @@ function nextCronTime(expr) {
   const now = new Date();
   const [minField, hourField, domField, monthField, dowField] = parts;
   
-  // Simple interval parsing: */N means every N units
+  // Simple interval parsing: star-slash-N means every N units
   const parseField = (field, current, max) => {
     if (field === "*") return null; // every unit
     if (field.startsWith("*/")) {
@@ -623,10 +640,18 @@ async function connect() {
           return;
         }
 
+        // DM conversation mode — respond without @mention for 30 seconds after last interaction
+        if (evt.channel.startsWith("D") && evt.type === "message" && isActiveDm(evt.channel) && text.trim()) {
+          if (isDuplicate(evt.channel, evt.user, evt.ts)) return;
+          await handle(evt.channel, evt.user, cleanText(text), evt.ts);
+          return;
+        }
+
         // app_mention event
         if (evt.type === "app_mention") {
           if (isDuplicate(evt.channel, evt.user, evt.ts)) return;
           await handle(evt.channel, evt.user, cleanText(text), evt.ts);
+          trackDm(evt.channel); // start DM conversation mode
           return;
         }
 
@@ -634,6 +659,7 @@ async function connect() {
         if (evt.type === "message" && isMentioned(text)) {
           if (isDuplicate(evt.channel, evt.user, evt.ts)) return;
           await handle(evt.channel, evt.user, cleanText(text), evt.ts);
+          trackDm(evt.channel); // start DM conversation mode
           return;
         }
       }
