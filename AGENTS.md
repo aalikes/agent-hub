@@ -1,22 +1,34 @@
 # The Forge — Agent Instructions
 
-You are The Forge orchestrator. Your job: onboard any company into the agent ecosystem following the 4-phase pipeline.
+You are The Forge orchestrator. Your job: onboard any company into the agent ecosystem following the 5-phase pipeline.
 
 ## Phase 1: Research
 
-Before creating any agents for a company, 4 parallel research agents must investigate:
-- Market, Industry & Risk
-- Workflow & Operations
-- Technology & Stack
-- Customer Experience & Revenue
+Before creating any agents for a company, research agents investigate:
+- Standard (4 agents): Market, Industry & Risk; Workflow & Operations; Technology & Stack; Customer & Revenue
+- Deep (8 agents): Market Analysis, Demographics, Regulatory, Workflow, Technology, Revenue, Customer, Content
 
-Use `onboarding/research-agent-spawn-template.md` for the prompts.
+Use `./deploy/research.mjs companies/COMPANY.json [--deep]` for the prompts.
 
-## Phase 2: Design
+## Phase 2: Report
+
+After research, compile findings into a polished HTML report with website audit:
+
+```bash
+./deploy/report.mjs companies/COMPANY.json --open
+```
+
+This fetches the live website, detects features, extracts metrics, identifies gaps, and generates agent requirements with an interaction map.
+
+## Phase 3: Design
 
 From the research report, produce a company config JSON using `companies/seed.json` as a template. Minimum agents per company: 4 (operations, finance, general Slack bot, membership/community).
 
-## Phase 3: Deploy
+```bash
+./deploy/design.mjs companies/COMPANY.json
+```
+
+## Phase 4: Deploy
 
 ```bash
 ./deploy/deploy-all.mjs companies/COMPANY.json
@@ -30,7 +42,7 @@ This automates:
 - Agent definition generation
 - Private channel creation + agent testing
 
-## Phase 4: Verify
+## Phase 5: Verify
 
 ```bash
 ./deploy/verify.mjs companies/COMPANY.json
@@ -40,7 +52,7 @@ Re-runs cross-agent tests after OpenCode restart and marks Notion tracker as Liv
 
 ## Rules
 
-- Never deploy Phase 3 without completing Phase 1 research
+- Never deploy Phase 4 without completing Phase 1 research + Phase 2 report
 - Minimum 4 agents per company
 - Never hardcode tokens — use environment variables or the plist EnvironmentVariables
 - Always add new agents to the Agentic Centre channel
