@@ -4,3 +4,4 @@ node_modules/
 .DS_Store
 companies/*-generated.json
 companies/hcc.json
+backups/
